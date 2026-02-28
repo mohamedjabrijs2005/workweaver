@@ -38,13 +38,13 @@ authRouter.post("/signup", async (req, res) => {
     const token = generateToken(id, role);
     res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
 
-    res.status(201).json({ user: { id, name, email, role }, token });
+    return res.status(201).json({ user: { id, name, email, role }, token });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Invalid input: " + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(", ") });
     }
     console.error("Signup error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: error?.message || "Internal server error" });
   }
 });
 
@@ -65,25 +65,30 @@ authRouter.post("/login", async (req, res) => {
     const token = generateToken(user.id, user.role);
     res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
 
-    res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
+    return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Invalid input" });
     }
     console.error("Login error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: error?.message || "Internal server error" });
   }
 });
 
 authRouter.post("/logout", (req, res) => {
   res.clearCookie("token");
-  res.json({ message: "Logged out successfully" });
+  return res.json({ message: "Logged out successfully" });
 });
 
 authRouter.get("/me", verifyToken, (req: AuthRequest, res) => {
-  const user = db.prepare("SELECT id, name, email, role FROM users WHERE id = ?").get(req.user?.id);
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
+  try {
+    const user = db.prepare("SELECT id, name, email, role FROM users WHERE id = ?").get(req.user?.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    return res.json({ user });
+  } catch (error: any) {
+    console.error("Get user error:", error);
+    return res.status(500).json({ error: error?.message || "Failed to fetch user" });
   }
-  res.json({ user });
 });

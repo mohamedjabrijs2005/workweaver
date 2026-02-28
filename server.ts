@@ -1,9 +1,24 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { createServer as createViteServer } from "vite";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./server/routes/auth.js";
 import { aiRouter } from "./server/routes/ai.js";
 import { knowledgeRouter } from "./server/routes/knowledge.js";
+
+// Wrapper to catch async errors in route handlers
+const asyncHandler = (fn: (req: any, res: Response, next: NextFunction) => Promise<any>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch((error) => {
+      console.error("Async route error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: error?.message || "Internal server error",
+          ...(process.env.NODE_ENV === "development" && { stack: error?.stack })
+        });
+      }
+    });
+  };
+};
 
 async function startServer() {
   const app = express();
@@ -35,6 +50,12 @@ async function startServer() {
     next();
   });
 
+  // Request logging middleware
+  app.use((req, res, next) => {
+    console.log(`[${req.method}] ${req.path}`);
+    next();
+  });
+
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
@@ -44,18 +65,24 @@ async function startServer() {
   app.use("/api/ai", aiRouter);
   app.use("/api/knowledge", knowledgeRouter);
 
-  // 404 handler
+  // 404 handler for API routes
   app.use("/api/*", (req, res) => {
     res.status(404).json({ error: "API endpoint not found" });
   });
 
   // Error handling middleware - ensure all errors return JSON
-  app.use((err: any, req: any, res: any, next: any) => {
-    console.error("Server error:", err);
-    res.status(err.status || 500).json({
-      error: err.message || "Internal server error",
-      ...(process.env.NODE_ENV === "development" && { stack: err.stack })
-    });
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal server error";
+    
+    console.error(`[${status}] ${message}`, err);
+    
+    if (!res.headersSent) {
+      res.status(status).json({
+        error: message,
+        ...(process.env.NODE_ENV === "development" && { stack: err.stack })
+      });
+    }
   });
 
   // Vite middleware for development
@@ -74,7 +101,9 @@ async function startServer() {
         res.sendFile("index.html", { root: "dist" });
       } catch (error: any) {
         console.error("Failed to send index.html:", error);
-        res.status(500).json({ error: "Failed to load application" });
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to load application" });
+        }
       }
     });
   }

@@ -24,7 +24,7 @@ knowledgeRouter.post("/save", verifyToken, (req: AuthRequest, res) => {
       "INSERT INTO knowledge (id, user_id, title, content, tags) VALUES (?, ?, ?, ?, ?)"
     ).run(id, userId, title, content, tags ? JSON.stringify(tags) : null);
 
-    res.status(201).json({ id, title, message: "Knowledge saved successfully" });
+    return res.status(201).json({ id, title, message: "Knowledge saved successfully" });
   } catch (error: any) {
     console.error("Save knowledge error:", error);
     res.status(500).json({ error: error?.message || "Failed to save knowledge" });
@@ -49,10 +49,10 @@ knowledgeRouter.get("/search", verifyToken, (req: AuthRequest, res) => {
       results = db.prepare("SELECT * FROM knowledge WHERE user_id = ?").all(userId);
     }
 
-    res.json({ results: Array.isArray(results) ? results : [] });
+    return res.json({ results: Array.isArray(results) ? results : [] });
   } catch (error: any) {
     console.error("Search knowledge error:", error);
-    res.status(500).json({ error: error?.message || "Failed to search knowledge" });
+    return res.status(500).json({ error: error?.message || "Failed to search knowledge" });
   }
 });
 
@@ -69,13 +69,13 @@ knowledgeRouter.get("/dashboard/summary", verifyToken, (req: AuthRequest, res) =
     
     const totalFocusTime = db.prepare("SELECT SUM(duration_minutes) as total FROM sessions WHERE user_id = ?").get(userId) as any;
 
-    res.json({
+    return res.json({
       recentSessions: Array.isArray(sessions) ? sessions : [],
       recentKnowledge: Array.isArray(knowledge) ? knowledge : [],
       totalFocusTime: totalFocusTime?.total || 0
     });
   } catch (error: any) {
     console.error("Dashboard summary error:", error);
-    res.status(500).json({ error: error?.message || "Failed to fetch summary" });
+    return res.status(500).json({ error: error?.message || "Failed to fetch summary" });
   }
 });

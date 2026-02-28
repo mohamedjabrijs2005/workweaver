@@ -35,7 +35,14 @@ export function SignUp() {
         body: JSON.stringify({ name, email, password, role }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Response was not JSON:", text);
+        throw new Error("Server error: Invalid response format");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to sign up");

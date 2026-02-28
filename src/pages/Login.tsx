@@ -23,7 +23,14 @@ export function Login() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Response was not JSON:", text);
+        throw new Error("Server error: Invalid response format");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to login");

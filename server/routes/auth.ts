@@ -39,10 +39,11 @@ authRouter.post("/signup", async (req, res) => {
     res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
 
     res.status(201).json({ user: { id, name, email, role }, token });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: (error as any).errors });
+      return res.status(400).json({ error: "Invalid input: " + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(", ") });
     }
+    console.error("Signup error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -65,7 +66,11 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
 
     res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+    console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

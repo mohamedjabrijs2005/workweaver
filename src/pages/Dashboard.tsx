@@ -16,8 +16,11 @@ export function Dashboard() {
       try {
         const res = await fetch("/api/knowledge/dashboard/summary");
         if (res.ok) {
-          const data = await res.json();
-          setSummary(data);
+          const text = await res.text();
+          if (text) {
+            const data = JSON.parse(text);
+            setSummary(data);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch summary", error);
@@ -40,8 +43,13 @@ export function Dashboard() {
         body: JSON.stringify({ input: contextInput }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setDetectedContext(data);
+        const text = await res.text();
+        if (text) {
+          const data = JSON.parse(text);
+          setDetectedContext(data);
+        }
+      } else {
+        console.error("Detect context failed:", res.status, await res.text());
       }
     } catch (error) {
       console.error("Failed to detect context", error);

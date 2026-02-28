@@ -16,8 +16,13 @@ export function KnowledgeHub() {
     try {
       const res = await fetch(`/api/knowledge/search?q=${query}`);
       if (res.ok) {
-        const data = await res.json();
-        setKnowledge(data.results);
+        const text = await res.text();
+        if (text) {
+          const data = JSON.parse(text);
+          setKnowledge(data.results);
+        }
+      } else {
+        console.error("Search failed:", res.status);
       }
     } catch (error) {
       console.error("Failed to fetch knowledge", error);

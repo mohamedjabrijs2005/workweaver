@@ -17,6 +17,10 @@ const getAiClient = () => {
 aiRouter.post("/detect-context", verifyToken, async (req: AuthRequest, res) => {
   try {
     const { input } = req.body;
+    if (!input || !input.trim()) {
+      return res.status(400).json({ error: "Input is required" });
+    }
+
     const ai = getAiClient();
 
     const prompt = `
@@ -35,17 +39,32 @@ aiRouter.post("/detect-context", verifyToken, async (req: AuthRequest, res) => {
       },
     });
 
-    const result = JSON.parse(response.text || "{}");
+    if (!response.text) {
+      return res.status(500).json({ error: "Invalid response from AI model" });
+    }
+
+    let result;
+    try {
+      result = JSON.parse(response.text);
+    } catch (e) {
+      console.error("Failed to parse AI response:", response.text);
+      return res.status(500).json({ error: "Invalid JSON response from AI" });
+    }
+
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Error:", error);
-    res.status(500).json({ error: "Failed to detect context" });
+    res.status(500).json({ error: error?.message || "Failed to detect context" });
   }
 });
 
 aiRouter.post("/generate-workspace", verifyToken, async (req: AuthRequest, res) => {
   try {
     const { context } = req.body;
+    if (!context || !context.trim()) {
+      return res.status(400).json({ error: "Context is required" });
+    }
+
     const ai = getAiClient();
 
     const prompt = `
@@ -62,11 +81,22 @@ aiRouter.post("/generate-workspace", verifyToken, async (req: AuthRequest, res) 
       },
     });
 
-    const result = JSON.parse(response.text || "{}");
+    if (!response.text) {
+      return res.status(500).json({ error: "Invalid response from AI model" });
+    }
+
+    let result;
+    try {
+      result = JSON.parse(response.text);
+    } catch (e) {
+      console.error("Failed to parse AI response:", response.text);
+      return res.status(500).json({ error: "Invalid JSON response from AI" });
+    }
+
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Error:", error);
-    res.status(500).json({ error: "Failed to generate workspace" });
+    res.status(500).json({ error: error?.message || "Failed to generate workspace" });
   }
 });
 
@@ -81,13 +111,22 @@ aiRouter.post("/deep-work/end", verifyToken, (req: AuthRequest, res) => {
   const userId = req.user?.id;
 
   try {
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!context || duration_minutes === undefined) {
+      return res.status(400).json({ error: "Context and duration_minutes are required" });
+    }
+
     const id = uuidv4();
     db.prepare(
       "INSERT INTO sessions (id, user_id, context, duration_minutes, focus_score) VALUES (?, ?, ?, ?, ?)"
     ).run(id, userId, context, duration_minutes, focus_score);
 
     res.json({ message: "Session saved successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to save session" });
+  } catch (error: any) {
+    console.error("Deep work end error:", error);
+    res.status(500).json({ error: error?.message || "Failed to save session" });
   }
 });

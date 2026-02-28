@@ -44,8 +44,13 @@ export function DeepWork() {
         body: JSON.stringify({ context: ctx }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data);
+        const text = await res.text();
+        if (text) {
+          const data = JSON.parse(text);
+          setWorkspace(data);
+        }
+      } else {
+        console.error("Generate workspace failed:", res.status, await res.text());
       }
     } catch (error) {
       console.error("Failed to generate workspace", error);

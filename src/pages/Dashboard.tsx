@@ -42,14 +42,22 @@ export function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: contextInput }),
       });
-      if (res.ok) {
-        const text = await res.text();
-        if (text) {
-          const data = JSON.parse(text);
+      
+      const text = await res.text();
+      if (!text) {
+        console.error("Detect context failed: Empty response", res.status);
+        return;
+      }
+
+      try {
+        const data = JSON.parse(text);
+        if (res.ok) {
           setDetectedContext(data);
+        } else {
+          console.error("Detect context failed:", res.status, data?.error || text);
         }
-      } else {
-        console.error("Detect context failed:", res.status, await res.text());
+      } catch (e) {
+        console.error("Failed to parse context response:", text);
       }
     } catch (error) {
       console.error("Failed to detect context", error);

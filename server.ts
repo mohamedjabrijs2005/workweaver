@@ -65,18 +65,27 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+    // In development, Vite handles HTML via middleware
   } else {
     app.use(express.static("dist"));
+    // Fallback to index.html for SPA in production
+    app.get("*", (req, res) => {
+      try {
+        res.sendFile("index.html", { root: "dist" });
+      } catch (error: any) {
+        console.error("Failed to send index.html:", error);
+        res.status(500).json({ error: "Failed to load application" });
+      }
+    });
   }
-
-  // Fallback to index.html for SPA in production
-  app.get("*", (req, res) => {
-    res.sendFile("index.html", { root: "dist" });
-  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});

@@ -43,14 +43,22 @@ export function DeepWork() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context: ctx }),
       });
-      if (res.ok) {
-        const text = await res.text();
-        if (text) {
-          const data = JSON.parse(text);
+      
+      const text = await res.text();
+      if (!text) {
+        console.error("Generate workspace failed: Empty response", res.status);
+        return;
+      }
+
+      try {
+        const data = JSON.parse(text);
+        if (res.ok) {
           setWorkspace(data);
+        } else {
+          console.error("Generate workspace failed:", res.status, data?.error || text);
         }
-      } else {
-        console.error("Generate workspace failed:", res.status, await res.text());
+      } catch (e) {
+        console.error("Failed to parse workspace response:", text);
       }
     } catch (error) {
       console.error("Failed to generate workspace", error);
@@ -74,7 +82,7 @@ export function DeepWork() {
     if (durationMinutes < 1) return; // Don't save very short sessions
 
     try {
-      await fetch("/api/ai/deep-work/end", {
+      const res = await fetch("/api/ai/deep-work/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,9 +91,30 @@ export function DeepWork() {
           focus_score: Math.floor(Math.random() * 20) + 80, // Mock score 80-100
         }),
       });
-      alert("Session saved successfully!");
+      
+      const text = await res.text();
+      if (!text) {
+        console.error("Session end: Empty response", res.status);
+        return;
+      }
+
+      let responseData;
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse session end response:", text);
+        return;
+      }
+
+      if (res.ok) {
+        alert("Session saved successfully!");
+      } else {
+        console.error("Failed to save session:", responseData?.error || text);
+        alert("Failed to save session: " + (responseData?.error || "Unknown error"));
+      }
     } catch (error) {
       console.error("Failed to save session", error);
+      alert("Error saving session: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 

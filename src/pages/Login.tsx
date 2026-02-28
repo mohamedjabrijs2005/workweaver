@@ -25,11 +25,16 @@ export function Login() {
 
       const text = await res.text();
       let data;
+      
+      if (!text) {
+        throw new Error("Server returned empty response");
+      }
+
       try {
         data = JSON.parse(text);
       } catch (e) {
         console.error("Response was not JSON:", text);
-        throw new Error("Server error: Invalid response format");
+        throw new Error("Server error: Invalid response format - " + text.substring(0, 100));
       }
 
       if (!res.ok) {
@@ -39,7 +44,9 @@ export function Login() {
       login(data.user, data.token);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message || "An unexpected error occurred";
+      console.error("Login error:", errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

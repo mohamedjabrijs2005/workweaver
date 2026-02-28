@@ -52,12 +52,28 @@ export function KnowledgeHub() {
         body: JSON.stringify({ title: newTitle, content: newContent, tags: tagsArray }),
       });
 
+      const text = await res.text();
+      if (!text) {
+        console.error("Save knowledge: Empty response", res.status);
+        return;
+      }
+
+      let responseData;
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse save response:", text);
+        return;
+      }
+
       if (res.ok) {
         setIsAdding(false);
         setNewTitle("");
         setNewContent("");
         setNewTags("");
         fetchKnowledge();
+      } else {
+        console.error("Failed to save knowledge:", responseData?.error || text);
       }
     } catch (error) {
       console.error("Failed to save knowledge", error);
